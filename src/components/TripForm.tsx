@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
 import type { TripFormData } from "../api";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 interface AutocompleteProps {
   value: string;
   onChange: (val: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   error?: string;
 }
@@ -18,6 +20,7 @@ interface AutocompleteProps {
 function LocationAutocomplete({
   value,
   onChange,
+  onBlur,
   placeholder,
   error,
 }: AutocompleteProps) {
@@ -76,6 +79,7 @@ function LocationAutocomplete({
         type="text"
         value={value}
         onChange={handleInput}
+        onBlur={onBlur}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
         placeholder={placeholder}
         autoComplete="off"
@@ -142,58 +146,28 @@ function LocationAutocomplete({
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export default function TripForm({ onSubmit, loading }: Props) {
-  const [form, setForm] = useState<TripFormData>({
-    current_location: "",
-    pickup_location: "",
-    dropoff_location: "",
-    current_cycle_used_hrs: 0,
-    trip_start_date: new Date().toISOString().slice(0, 10),
-    driver_name: "",
-    driver_number: "",
-    tractor_number: "",
-    trailer_number: "",
-    home_terminal: "",
-    carrier_name: "",
-    shipper: "",
-    commodity: "",
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<TripFormData>({
+    defaultValues: {
+      current_location: "",
+      pickup_location: "",
+      dropoff_location: "",
+      current_cycle_used_hrs: 0,
+      trip_start_date: new Date().toISOString().slice(0, 10),
+      driver_name: "",
+      driver_number: "",
+      tractor_number: "",
+      trailer_number: "",
+      home_terminal: "",
+      carrier_name: "",
+      shipper: "",
+      commodity: "",
+    },
   });
-
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof TripFormData, string>>
-  >({});
-
-  function validate(): boolean {
-    const e: Partial<Record<keyof TripFormData, string>> = {};
-    if (!form.current_location.trim()) e.current_location = "Required";
-    if (!form.pickup_location.trim()) e.pickup_location = "Required";
-    if (!form.dropoff_location.trim()) e.dropoff_location = "Required";
-    if (form.current_cycle_used_hrs < 0 || form.current_cycle_used_hrs > 70)
-      e.current_cycle_used_hrs = "Must be 0–70 hours";
-    if (!form.driver_name?.trim()) e.driver_name = "Required";
-    if (!form.driver_number?.trim()) e.driver_number = "Required";
-    if (!form.tractor_number?.trim()) e.tractor_number = "Required";
-    if (!form.trailer_number?.trim()) e.trailer_number = "Required";
-    if (!form.home_terminal?.trim()) e.home_terminal = "Required";
-    if (!form.carrier_name?.trim()) e.carrier_name = "Required";
-    if (!form.shipper?.trim()) e.shipper = "Required";
-    if (!form.commodity?.trim()) e.commodity = "Required";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (validate()) onSubmit(form);
-  }
-
-  function setLoc(
-    key: "current_location" | "pickup_location" | "dropoff_location",
-  ) {
-    return (val: string) => {
-      setForm((f) => ({ ...f, [key]: val }));
-      setErrors((prev) => ({ ...prev, [key]: undefined }));
-    };
-  }
 
   function textField(
     key: keyof TripFormData,
@@ -201,7 +175,7 @@ export default function TripForm({ onSubmit, loading }: Props) {
     hint?: string,
     required?: boolean,
   ) {
-    const err = errors[key];
+    const err = errors[key]?.message;
     return (
       <div style={{ marginBottom: 14 }}>
         <label
@@ -216,11 +190,7 @@ export default function TripForm({ onSubmit, loading }: Props) {
         </label>
         <input
           type="text"
-          value={String(form[key] ?? "")}
-          onChange={(e) => {
-            setForm((f) => ({ ...f, [key]: e.target.value }));
-            setErrors((prev) => ({ ...prev, [key]: undefined }));
-          }}
+          {...register(key, { required: required ? "Required" : false })}
           placeholder={hint}
           style={{
             width: "100%",
@@ -238,7 +208,7 @@ export default function TripForm({ onSubmit, loading }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>
+    <form onSubmit={handleSubmit(onSubmit)} style={{ maxWidth: 480 }}>
       <h2 style={{ fontFamily: "monospace", marginBottom: 20 }}>
         Trip Details
       </h2>
@@ -254,41 +224,38 @@ export default function TripForm({ onSubmit, loading }: Props) {
       >
         <legend style={{ fontWeight: 600, padding: "0 6px" }}>Locations</legend>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
-            Current Location <span style={{ color: "red" }}>*</span>
-          </label>
-          <LocationAutocomplete
-            value={form.current_location}
-            onChange={setLoc("current_location")}
-            placeholder="e.g. Chicago, IL"
-            error={errors.current_location}
-          />
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
-            Pickup Location <span style={{ color: "red" }}>*</span>
-          </label>
-          <LocationAutocomplete
-            value={form.pickup_location}
-            onChange={setLoc("pickup_location")}
-            placeholder="e.g. Milwaukee, WI"
-            error={errors.pickup_location}
-          />
-        </div>
-
-        <div style={{ marginBottom: 0 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
-            Dropoff Location <span style={{ color: "red" }}>*</span>
-          </label>
-          <LocationAutocomplete
-            value={form.dropoff_location}
-            onChange={setLoc("dropoff_location")}
-            placeholder="e.g. Indianapolis, IN"
-            error={errors.dropoff_location}
-          />
-        </div>
+        {(
+          [
+            ["current_location", "Current Location", "e.g. Chicago, IL"],
+            ["pickup_location", "Pickup Location", "e.g. Milwaukee, WI"],
+            ["dropoff_location", "Dropoff Location", "e.g. Indianapolis, IN"],
+          ] as const
+        ).map(([key, label, placeholder], idx, arr) => (
+          <div
+            key={key}
+            style={{ marginBottom: idx < arr.length - 1 ? 14 : 0 }}
+          >
+            <label
+              style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
+            >
+              {label} <span style={{ color: "red" }}>*</span>
+            </label>
+            <Controller
+              name={key}
+              control={control}
+              rules={{ required: "Required" }}
+              render={({ field }) => (
+                <LocationAutocomplete
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder={placeholder}
+                  error={errors[key]?.message}
+                />
+              )}
+            />
+          </div>
+        ))}
       </fieldset>
 
       {/* ── HOS Cycle ── */}
@@ -308,13 +275,12 @@ export default function TripForm({ onSubmit, loading }: Props) {
           </label>
           <input
             type="number"
-            value={form.current_cycle_used_hrs}
-            onChange={(e) =>
-              setForm((f) => ({
-                ...f,
-                current_cycle_used_hrs: parseFloat(e.target.value) || 0,
-              }))
-            }
+            {...register("current_cycle_used_hrs", {
+              required: "Required",
+              min: { value: 0, message: "Must be 0–70 hours" },
+              max: { value: 70, message: "Must be 0–70 hours" },
+              valueAsNumber: true,
+            })}
             placeholder="0–70 hours used in the last 8 days"
             step="0.5"
             min={0}
@@ -333,7 +299,7 @@ export default function TripForm({ onSubmit, loading }: Props) {
           />
           {errors.current_cycle_used_hrs && (
             <span style={{ color: "red", fontSize: 11 }}>
-              {errors.current_cycle_used_hrs}
+              {errors.current_cycle_used_hrs.message}
             </span>
           )}
         </div>
@@ -344,10 +310,7 @@ export default function TripForm({ onSubmit, loading }: Props) {
           </label>
           <input
             type="date"
-            value={form.trip_start_date ?? ""}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, trip_start_date: e.target.value }))
-            }
+            {...register("trip_start_date")}
             style={{
               width: "100%",
               padding: "8px 10px",

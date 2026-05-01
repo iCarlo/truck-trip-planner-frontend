@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { planTrip } from "./api";
-import type { TripFormData, TripPlanResponse } from "./api";
+import type { TripFormData } from "./api";
 import TripForm from "./components/TripForm";
 import RouteMap from "./components/RouteMap";
 import LogSheetList from "./components/LogSheetList";
@@ -8,25 +9,20 @@ import LogSheetList from "./components/LogSheetList";
 type Tab = "map" | "logs";
 
 export default function App() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<TripPlanResponse | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("map");
 
-  async function handleSubmit(form: TripFormData) {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      const data = await planTrip(form);
-      setResult(data);
-      setActiveTab("map");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const mutation = useMutation({
+    mutationFn: (form: TripFormData) => planTrip(form),
+    onSuccess: () => setActiveTab("map"),
+  });
+
+  const result = mutation.data ?? null;
+  const loading = mutation.isPending;
+  const error = mutation.error
+    ? mutation.error instanceof Error
+      ? mutation.error.message
+      : "Unknown error"
+    : null;
 
   return (
     <div
@@ -56,7 +52,7 @@ export default function App() {
       >
         {/* Left: form */}
         <div>
-          <TripForm onSubmit={handleSubmit} loading={loading} />
+          <TripForm onSubmit={mutation.mutate} loading={loading} />
           {error && (
             <div
               style={{
