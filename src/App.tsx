@@ -5,11 +5,24 @@ import type { TripFormData } from "./api";
 import TripForm from "./components/TripForm";
 import RouteMap from "./components/RouteMap";
 import LogSheetList from "./components/LogSheetList";
+import { ThemeProvider } from "./components/theme-provider";
+import { ThemeToggle } from "./components/theme-toggle";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
+import { Badge } from "./components/ui/badge";
+import { Separator } from "./components/ui/separator";
+import { ResultSkeleton } from "./components/ui/skeleton";
+import {
+  Truck,
+  Map,
+  FileText,
+  AlertCircle,
+  Route,
+  Clock,
+  LayoutDashboard,
+} from "lucide-react";
 
-type Tab = "map" | "logs";
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>("map");
+function AppContent() {
+  const [activeTab, setActiveTab] = useState("map");
 
   const mutation = useMutation({
     mutationFn: (form: TripFormData) => planTrip(form),
@@ -25,125 +38,118 @@ export default function App() {
     : null;
 
   return (
-    <div
-      style={{
-        maxWidth: 1200,
-        margin: "0 auto",
-        padding: "24px 16px",
-        fontFamily: "sans-serif",
-      }}
-    >
-      <header style={{ marginBottom: 32 }}>
-        <h1 style={{ fontFamily: "monospace", fontSize: 22, margin: 0 }}>
-          🚛 ELD Trip Planner
-        </h1>
-        <p style={{ color: "#666", fontSize: 13, margin: "4px 0 0" }}>
-          70-hr/8-day property-carrying driver · HOS compliant route + daily log
-          sheets
-        </p>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* ── Top nav ── */}
+      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+          <div className="flex items-center gap-2.5 font-semibold text-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <Truck className="h-4 w-4" />
+            </div>
+            <span className="hidden sm:inline">ELD Trip Planner</span>
+          </div>
+
+          <Separator orientation="vertical" className="h-5 hidden sm:block" />
+
+          <p className="hidden md:block text-xs text-muted-foreground">
+            70-hr/8-day · HOS compliant route + daily log sheets
+          </p>
+
+          {result && (
+            <>
+              <Separator orientation="vertical" className="h-5 mx-1" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  <Route className="h-3 w-3" />
+                  {result.summary.total_miles.toFixed(0)} mi
+                </Badge>
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  <Clock className="h-3 w-3" />
+                  {result.summary.total_drive_hrs.toFixed(1)} hrs
+                </Badge>
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  <LayoutDashboard className="h-3 w-3" />
+                  {result.summary.num_log_sheets} sheet
+                  {result.summary.num_log_sheets !== 1 ? "s" : ""}
+                </Badge>
+              </div>
+            </>
+          )}
+
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
+        </div>
       </header>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: result ? "380px 1fr" : "480px",
-          gap: 40,
-        }}
-      >
-        {/* Left: form */}
-        <div>
-          <TripForm onSubmit={mutation.mutate} loading={loading} />
-          {error && (
-            <div
-              style={{
-                marginTop: 16,
-                padding: 12,
-                background: "#fff0f0",
-                border: "1px solid #ffaaaa",
-                borderRadius: 4,
-                fontFamily: "monospace",
-                fontSize: 12,
-                color: "#c00",
-              }}
-            >
-              {error}
+      {/* ── Main layout ── */}
+      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 sm:px-6 py-6">
+        <div
+          className={`flex gap-6 ${result || loading ? "lg:flex-row" : "justify-center"} flex-col`}
+        >
+          {/* Left: form panel */}
+          <div
+            className={
+              result || loading ? "lg:w-[380px] shrink-0" : "w-full max-w-xl"
+            }
+          >
+            <div className="sticky top-20">
+              <TripForm onSubmit={mutation.mutate} loading={loading} />
+
+              {/* Error state */}
+              {error && (
+                <div className="mt-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive animate-fade-in">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <p className="font-medium">{error}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: results */}
+          {(result || loading) && (
+            <div className="flex-1 min-w-0 animate-slide-in-right">
+              {loading ? (
+                <ResultSkeleton />
+              ) : result ? (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="map" className="gap-1.5">
+                      <Map className="h-3.5 w-3.5" />
+                      Route Map
+                    </TabsTrigger>
+                    <TabsTrigger value="logs" className="gap-1.5">
+                      <FileText className="h-3.5 w-3.5" />
+                      Log Sheets
+                      <Badge
+                        variant="secondary"
+                        className="ml-1 text-xs px-1.5 py-0 h-4"
+                      >
+                        {result.summary.num_log_sheets}
+                      </Badge>
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="map" className="animate-fade-in">
+                    <RouteMap route={result.route} />
+                  </TabsContent>
+                  <TabsContent value="logs" className="animate-fade-in">
+                    <LogSheetList sheets={result.log_sheets} />
+                  </TabsContent>
+                </Tabs>
+              ) : null}
             </div>
           )}
         </div>
-
-        {/* Right: results */}
-        {result && (
-          <div>
-            {/* Summary bar */}
-            <div
-              style={{
-                display: "flex",
-                gap: 24,
-                marginBottom: 20,
-                padding: "10px 16px",
-                background: "#f5f5f5",
-                borderRadius: 6,
-                fontFamily: "monospace",
-                fontSize: 13,
-              }}
-            >
-              <span>
-                <strong>{result.summary.total_miles.toFixed(0)}</strong> miles
-              </span>
-              <span>
-                <strong>{result.summary.total_drive_hrs.toFixed(1)}</strong> hrs
-                driving
-              </span>
-              <span>
-                <strong>{result.summary.num_log_sheets}</strong> log sheet
-                {result.summary.num_log_sheets !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {/* Tab bar */}
-            <div
-              style={{
-                display: "flex",
-                gap: 0,
-                marginBottom: 20,
-                borderBottom: "2px solid #ddd",
-              }}
-            >
-              {(["map", "logs"] as Tab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  style={{
-                    padding: "8px 24px",
-                    border: "none",
-                    borderBottom:
-                      activeTab === tab
-                        ? "2px solid #1a1a1a"
-                        : "2px solid transparent",
-                    background: "transparent",
-                    fontFamily: "monospace",
-                    fontSize: 13,
-                    fontWeight: activeTab === tab ? 700 : 400,
-                    cursor: "pointer",
-                    marginBottom: -2,
-                  }}
-                >
-                  {tab === "map" ? "🗺 Route Map" : "📋 Log Sheets"}
-                </button>
-              ))}
-            </div>
-
-            {activeTab === "map" && (
-              <div data-section="map">
-                <RouteMap route={result.route} />
-              </div>
-            )}
-            {activeTab === "logs" && (
-              <LogSheetList sheets={result.log_sheets} />
-            )}
-          </div>
-        )}
-      </div>
+      </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="eld-ui-theme">
+      <AppContent />
+    </ThemeProvider>
   );
 }

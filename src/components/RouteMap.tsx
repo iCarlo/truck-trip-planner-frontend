@@ -10,6 +10,8 @@ import {
 import L from "leaflet";
 import type { RouteData } from "../api";
 import "leaflet/dist/leaflet.css";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 // Fix Leaflet default icon paths broken by Vite bundling
 delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
@@ -21,11 +23,19 @@ L.Icon.Default.mergeOptions({
 });
 
 const MARKER_COLORS: Record<string, string> = {
-  start: "#2196f3",
-  pickup: "#4caf50",
-  dropoff: "#f44336",
-  fuel: "#ff9800",
-  rest: "#9c27b0",
+  start: "#3b82f6",
+  pickup: "#22c55e",
+  dropoff: "#ef4444",
+  fuel: "#f97316",
+  rest: "#a855f7",
+};
+
+const MARKER_LABELS: Record<string, string> = {
+  start: "Start",
+  pickup: "Pickup",
+  dropoff: "Dropoff",
+  fuel: "Fuel",
+  rest: "Rest",
 };
 
 function makeIcon(type: string) {
@@ -44,7 +54,6 @@ function makeIcon(type: string) {
   });
 }
 
-/** Auto-fits map bounds to the polyline when route changes. */
 function FitBounds({ polyline }: { polyline: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
@@ -66,52 +75,30 @@ export default function RouteMap({ route }: Props) {
     route.polyline.length > 0 ? route.polyline[0] : [39.5, -98.35];
 
   return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ marginBottom: 8, fontFamily: "monospace" }}>
-        <strong>Total distance:</strong> {route.total_miles.toFixed(1)} miles
-        &nbsp;|&nbsp;
-        <strong>Drive time:</strong> {route.total_drive_hrs.toFixed(1)} hrs
-      </div>
-
+    <div className="flex flex-col gap-3">
       {/* Legend */}
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          marginBottom: 8,
-          flexWrap: "wrap",
-          fontSize: 12,
-          fontFamily: "monospace",
-        }}
-      >
+      <div className="flex flex-wrap gap-2">
         {Object.entries(MARKER_COLORS).map(([type, color]) => (
-          <span
+          <Badge
             key={type}
-            style={{ display: "flex", alignItems: "center", gap: 4 }}
+            variant="outline"
+            className="gap-1.5 text-xs font-medium"
           >
             <span
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                background: color,
-                display: "inline-block",
-              }}
+              className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+              style={{ background: color }}
             />
-            {type.charAt(0).toUpperCase() + type.slice(1)}
-          </span>
+            {MARKER_LABELS[type] ?? type}
+          </Badge>
         ))}
       </div>
 
       <MapContainer
         center={center}
         zoom={5}
-        style={{
-          height: 420,
-          width: "100%",
-          borderRadius: 6,
-          border: "1px solid #ccc",
-        }}
+        className={cn(
+          "h-[420px] w-full rounded-xl border border-border overflow-hidden isolate",
+        )}
         scrollWheelZoom
       >
         <TileLayer
@@ -123,9 +110,9 @@ export default function RouteMap({ route }: Props) {
         {route.polyline.length > 1 && (
           <Polyline
             positions={route.polyline}
-            color="#1a1a1a"
-            weight={3}
-            opacity={0.8}
+            color="#3b82f6"
+            weight={4}
+            opacity={0.85}
           />
         )}
 
@@ -136,7 +123,7 @@ export default function RouteMap({ route }: Props) {
             icon={makeIcon(wp.type)}
           >
             <Popup>
-              <strong>{wp.type.toUpperCase()}</strong>
+              <strong className="capitalize">{wp.type}</strong>
               <br />
               {wp.name}
             </Popup>

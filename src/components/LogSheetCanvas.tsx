@@ -24,6 +24,8 @@
 
 import { useEffect, useRef } from "react";
 import type { LogSheet, LogEntry } from "../api";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 // ─── Layout constants (pixels) ────────────────────────────────────────────────
 const CANVAS_W = 1100;
@@ -404,43 +406,26 @@ export default function LogSheetCanvas({ sheet, onExport }: Props) {
   }
 
   return (
-    <div style={{ marginBottom: 32 }} className="log-sheet-card">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 8,
-        }}
-        className="log-sheet-actions"
-      >
-        <h3 style={{ margin: 0, fontFamily: "monospace" }}>
-          {sheet.date_label}
-        </h3>
-        <button
+    <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <span className="text-sm font-medium">{sheet.date_label}</span>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleExport}
-          className="no-print"
-          style={{
-            padding: "4px 12px",
-            fontFamily: "monospace",
-            fontSize: 12,
-            cursor: "pointer",
-          }}
+          className="gap-1.5 text-xs h-7"
         >
+          <Download className="h-3 w-3" />
           Export PNG
-        </button>
+        </Button>
       </div>
-      <div style={{ overflowX: "auto" }}>
+      <div className="overflow-x-auto p-4">
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          style={{
-            border: "1px solid #ccc",
-            display: "block",
-            maxWidth: "100%",
-            height: "auto",
-          }}
+          className="block max-w-full h-auto rounded-md border border-border"
+          style={{ height: "auto" }}
         />
       </div>
     </div>

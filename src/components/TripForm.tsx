@@ -1,6 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
+import {
+  MapPin,
+  Truck,
+  User,
+  Package,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Navigation,
+} from "lucide-react";
 import type { TripFormData } from "../api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface Props {
   onSubmit: (data: TripFormData) => void;
@@ -74,71 +89,113 @@ function LocationAutocomplete({
   }
 
   return (
-    <div ref={containerRef} style={{ position: "relative" }}>
-      <input
-        type="text"
-        value={value}
-        onChange={handleInput}
-        onBlur={onBlur}
-        onFocus={() => suggestions.length > 0 && setOpen(true)}
-        placeholder={placeholder}
-        autoComplete="off"
-        style={{
-          width: "100%",
-          padding: "8px 10px",
-          border: error ? "1px solid red" : "1px solid #ccc",
-          borderRadius: 4,
-          fontFamily: "monospace",
-          fontSize: 13,
-          boxSizing: "border-box",
-        }}
-      />
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          type="text"
+          value={value}
+          onChange={handleInput}
+          onBlur={onBlur}
+          onFocus={() => suggestions.length > 0 && setOpen(true)}
+          placeholder={placeholder}
+          autoComplete="off"
+          className={cn(
+            "pl-8",
+            error ? "border-destructive focus-visible:ring-destructive" : "",
+          )}
+        />
+      </div>
       {open && (
-        <ul
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            zIndex: 999,
-            margin: 0,
-            padding: 0,
-            listStyle: "none",
-            border: "1px solid #bbb",
-            borderTop: "none",
-            borderRadius: "0 0 4px 4px",
-            background: "#fff",
-            maxHeight: 220,
-            overflowY: "auto",
-            boxShadow: "0 4px 8px rgba(0,0,0,0.12)",
-          }}
-        >
+        <ul className="absolute top-full left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto rounded-lg border bg-card shadow-lg animate-fade-in p-0 list-none">
           {suggestions.map((s, i) => (
             <li
               key={i}
               onPointerDown={() => select(s)}
-              style={{
-                padding: "7px 10px",
-                fontSize: 12,
-                fontFamily: "monospace",
-                cursor: "pointer",
-                borderBottom:
-                  i < suggestions.length - 1 ? "1px solid #eee" : "none",
-              }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLLIElement).style.background =
-                  "#f0f4ff")
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLLIElement).style.background = "#fff")
-              }
+              className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors first:rounded-t-lg last:rounded-b-lg"
             >
-              {s}
+              <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <span className="truncate">{s}</span>
             </li>
           ))}
         </ul>
       )}
-      {error && <span style={{ color: "red", fontSize: 11 }}>{error}</span>}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+// ─── Collapsible section ──────────────────────────────────────────────────────
+
+interface SectionProps {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+function FormSection({
+  title,
+  icon,
+  children,
+  defaultOpen = true,
+}: SectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border bg-card">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex w-full items-center justify-between px-5 py-3.5 text-sm font-semibold hover:bg-accent/50 transition-colors rounded-t-xl",
+          !open && "rounded-b-xl",
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-muted-foreground">{icon}</span>
+          {title}
+        </span>
+        {open ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        )}
+      </button>
+      {open && (
+        <div className="px-5 pb-5 pt-1 flex flex-col gap-4 rounded-b-xl">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Field wrapper ────────────────────────────────────────────────────────────
+
+interface FieldProps {
+  label: string;
+  required?: boolean;
+  error?: string;
+  hint?: string;
+  children: React.ReactNode;
+}
+
+function Field({ label, required, error, hint, children }: FieldProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label
+        className={cn(
+          "text-sm",
+          required && "after:content-['*'] after:ml-0.5 after:text-destructive",
+        )}
+      >
+        {label}
+      </Label>
+      {children}
+      {hint && !error && (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -169,77 +226,18 @@ export default function TripForm({ onSubmit, loading }: Props) {
     },
   });
 
-  function textField(
-    key: keyof TripFormData,
-    label: string,
-    hint?: string,
-    required?: boolean,
-  ) {
-    const err = errors[key]?.message;
-    return (
-      <div style={{ marginBottom: 14 }}>
-        <label
-          style={{
-            display: "block",
-            fontWeight: required ? 600 : 400,
-            marginBottom: 4,
-          }}
-        >
-          {label}
-          {required && <span style={{ color: "red" }}> *</span>}
-        </label>
-        <input
-          type="text"
-          {...register(key, { required: required ? "Required" : false })}
-          placeholder={hint}
-          style={{
-            width: "100%",
-            padding: "8px 10px",
-            border: err ? "1px solid red" : "1px solid #ccc",
-            borderRadius: 4,
-            fontFamily: "monospace",
-            fontSize: 13,
-            boxSizing: "border-box",
-          }}
-        />
-        {err && <span style={{ color: "red", fontSize: 11 }}>{err}</span>}
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} style={{ maxWidth: 480 }}>
-      <h2 style={{ fontFamily: "monospace", marginBottom: 20 }}>
-        Trip Details
-      </h2>
-
-      {/* ── Locations ── */}
-      <fieldset
-        style={{
-          border: "1px solid #ddd",
-          padding: 16,
-          marginBottom: 20,
-          borderRadius: 6,
-        }}
-      >
-        <legend style={{ fontWeight: 600, padding: "0 6px" }}>Locations</legend>
-
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      {/* Locations */}
+      <FormSection title="Locations" icon={<MapPin className="h-4 w-4" />}>
         {(
           [
             ["current_location", "Current Location", "e.g. Chicago, IL"],
             ["pickup_location", "Pickup Location", "e.g. Milwaukee, WI"],
             ["dropoff_location", "Dropoff Location", "e.g. Indianapolis, IN"],
           ] as const
-        ).map(([key, label, placeholder], idx, arr) => (
-          <div
-            key={key}
-            style={{ marginBottom: idx < arr.length - 1 ? 14 : 0 }}
-          >
-            <label
-              style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
-            >
-              {label} <span style={{ color: "red" }}>*</span>
-            </label>
+        ).map(([key, label, placeholder]) => (
+          <Field key={key} label={label} required error={errors[key]?.message}>
             <Controller
               name={key}
               control={control}
@@ -254,26 +252,19 @@ export default function TripForm({ onSubmit, loading }: Props) {
                 />
               )}
             />
-          </div>
+          </Field>
         ))}
-      </fieldset>
+      </FormSection>
 
-      {/* ── HOS Cycle ── */}
-      <fieldset
-        style={{
-          border: "1px solid #ddd",
-          padding: 16,
-          marginBottom: 20,
-          borderRadius: 6,
-        }}
-      >
-        <legend style={{ fontWeight: 600, padding: "0 6px" }}>HOS Cycle</legend>
-
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
-            Current Cycle Used (hrs) <span style={{ color: "red" }}>*</span>
-          </label>
-          <input
+      {/* HOS Cycle */}
+      <FormSection title="HOS Cycle" icon={<Clock className="h-4 w-4" />}>
+        <Field
+          label="Current Cycle Used (hrs)"
+          required
+          error={errors.current_cycle_used_hrs?.message}
+          hint="70-hr/8-day rule · property-carrying driver · no adverse conditions"
+        >
+          <Input
             type="number"
             {...register("current_cycle_used_hrs", {
               required: "Required",
@@ -285,107 +276,133 @@ export default function TripForm({ onSubmit, loading }: Props) {
             step="0.5"
             min={0}
             max={70}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              border: errors.current_cycle_used_hrs
-                ? "1px solid red"
-                : "1px solid #ccc",
-              borderRadius: 4,
-              fontFamily: "monospace",
-              fontSize: 13,
-              boxSizing: "border-box",
-            }}
+            className={
+              errors.current_cycle_used_hrs ? "border-destructive" : ""
+            }
           />
-          {errors.current_cycle_used_hrs && (
-            <span style={{ color: "red", fontSize: 11 }}>
-              {errors.current_cycle_used_hrs.message}
-            </span>
-          )}
-        </div>
+        </Field>
+        <Field label="Trip Start Date">
+          <Input type="date" {...register("trip_start_date")} />
+        </Field>
+      </FormSection>
 
-        <div style={{ marginBottom: 0 }}>
-          <label style={{ display: "block", fontWeight: 400, marginBottom: 4 }}>
-            Trip Start Date
-          </label>
-          <input
-            type="date"
-            {...register("trip_start_date")}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              border: "1px solid #ccc",
-              borderRadius: 4,
-              fontFamily: "monospace",
-              fontSize: 13,
-              boxSizing: "border-box",
-            }}
+      {/* Driver & Vehicle */}
+      <FormSection title="Driver & Vehicle" icon={<User className="h-4 w-4" />}>
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label="Driver Name"
+            required
+            error={errors.driver_name?.message}
+          >
+            <Input
+              {...register("driver_name", { required: "Required" })}
+              placeholder="Full name"
+              className={errors.driver_name ? "border-destructive" : ""}
+            />
+          </Field>
+          <Field
+            label="Driver #"
+            required
+            error={errors.driver_number?.message}
+          >
+            <Input
+              {...register("driver_number", { required: "Required" })}
+              placeholder="CDL or employee #"
+              className={errors.driver_number ? "border-destructive" : ""}
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label="Tractor #"
+            required
+            error={errors.tractor_number?.message}
+          >
+            <Input
+              {...register("tractor_number", { required: "Required" })}
+              placeholder="Unit number"
+              className={errors.tractor_number ? "border-destructive" : ""}
+            />
+          </Field>
+          <Field
+            label="Trailer #"
+            required
+            error={errors.trailer_number?.message}
+          >
+            <Input
+              {...register("trailer_number", { required: "Required" })}
+              placeholder="Trailer number"
+              className={errors.trailer_number ? "border-destructive" : ""}
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label="Home Terminal"
+            required
+            error={errors.home_terminal?.message}
+          >
+            <Input
+              {...register("home_terminal", { required: "Required" })}
+              placeholder="City, State"
+              className={errors.home_terminal ? "border-destructive" : ""}
+            />
+          </Field>
+          <Field
+            label="Carrier Name"
+            required
+            error={errors.carrier_name?.message}
+          >
+            <Input
+              {...register("carrier_name", { required: "Required" })}
+              placeholder="Company name"
+              className={errors.carrier_name ? "border-destructive" : ""}
+            />
+          </Field>
+        </div>
+      </FormSection>
+
+      {/* Freight */}
+      <FormSection
+        title="Freight"
+        icon={<Package className="h-4 w-4" />}
+        defaultOpen={false}
+      >
+        <Field label="Shipper" required error={errors.shipper?.message}>
+          <Input
+            {...register("shipper", { required: "Required" })}
+            placeholder="Shipping company or name"
+            className={errors.shipper ? "border-destructive" : ""}
           />
-        </div>
+        </Field>
+        <Field label="Commodity" required error={errors.commodity?.message}>
+          <Input
+            {...register("commodity", { required: "Required" })}
+            placeholder="e.g. General Freight, Produce"
+            className={errors.commodity ? "border-destructive" : ""}
+          />
+        </Field>
+      </FormSection>
 
-        <p style={{ fontSize: 11, color: "#666", margin: "8px 0 0" }}>
-          Assumes 70-hr/8-day rule, property-carrying driver, no adverse
-          conditions.
-        </p>
-      </fieldset>
-
-      {/* ── Driver & Vehicle ── */}
-      <fieldset
-        style={{
-          border: "1px solid #ddd",
-          padding: 16,
-          marginBottom: 20,
-          borderRadius: 6,
-        }}
-      >
-        <legend style={{ fontWeight: 600, padding: "0 6px" }}>
-          Driver & Vehicle
-        </legend>
-        {textField("driver_name", "Driver Name", "Full name", true)}
-        {textField("driver_number", "Driver #", "CDL or employee number", true)}
-        {textField("tractor_number", "Tractor #", "Unit number", true)}
-        {textField("trailer_number", "Trailer #", "Trailer number", true)}
-        {textField("home_terminal", "Home Terminal", "City, State", true)}
-        {textField("carrier_name", "Carrier Name", "Company name", true)}
-      </fieldset>
-
-      {/* ── Freight ── */}
-      <fieldset
-        style={{
-          border: "1px solid #ddd",
-          padding: 16,
-          marginBottom: 20,
-          borderRadius: 6,
-        }}
-      >
-        <legend style={{ fontWeight: 600, padding: "0 6px" }}>Freight</legend>
-        {textField("shipper", "Shipper", "Shipping company or name", true)}
-        {textField(
-          "commodity",
-          "Commodity",
-          "e.g. General Freight, Produce",
-          true,
-        )}
-      </fieldset>
-
-      <button
+      <Button
         type="submit"
         disabled={loading}
-        style={{
-          width: "100%",
-          padding: "12px 0",
-          background: loading ? "#888" : "#1a1a1a",
-          color: "#fff",
-          border: "none",
-          borderRadius: 4,
-          fontFamily: "monospace",
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: loading ? "not-allowed" : "pointer",
-        }}
+        size="lg"
+        className="w-full gap-2 font-semibold"
       >
-        {loading ? "Calculating route…" : "Generate Trip Plan →"}
-      </button>
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Calculating route…
+          </>
+        ) : (
+          <>
+            <Truck className="h-4 w-4" />
+            Generate Trip Plan
+            <Navigation className="h-4 w-4 ml-auto opacity-60" />
+          </>
+        )}
+      </Button>
     </form>
   );
 }
