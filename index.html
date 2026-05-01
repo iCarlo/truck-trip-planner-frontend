@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ELD Trip Planner</title>
+    <style>
+      @media print {
+        /* Hide interactive UI elements when printing */
+        .no-print,
+        button { display: none !important; }
+
+        /* Each log sheet starts on its own page */
+        .log-sheet-card { page-break-after: always; break-after: page; }
+
+        /* Scale canvas to fill the print page width */
+        canvas {
+          width: 100% !important;
+          height: auto !important;
+          border: none !important;
+        }
+
+        /* Hide the route map section when printing */
+        [data-section="map"] { display: none !important; }
+
+        body { margin: 0; padding: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
