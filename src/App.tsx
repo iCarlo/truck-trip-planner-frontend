@@ -100,7 +100,9 @@ function AppContent() {
               {error && (
                 <div className="mt-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive animate-fade-in">
                   <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                  <p className="font-medium">{error}</p>
+                  <p className="font-medium min-w-0 break-words overflow-wrap-anywhere">
+                    {error}
+                  </p>
                 </div>
               )}
             </div>

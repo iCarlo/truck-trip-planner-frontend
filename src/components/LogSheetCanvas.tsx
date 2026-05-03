@@ -115,49 +115,59 @@ function drawHeader(ctx: CanvasRenderingContext2D, sheet: LogSheet) {
 }
 
 function drawGrid(ctx: CanvasRenderingContext2D) {
+  // Inner bounds — 1px inset from the outer border so strokes never bleed
+  // outside the frame. The outer border is drawn last to act as a hard cover.
+  const innerTop = GRID_Y + 1;
+  const innerBottom = GRID_Y + GRID_H - 1;
+
+  // Row dividers (horizontal)
   ctx.strokeStyle = C_GRID;
   ctx.lineWidth = 1;
-
-  // Outer border
-  ctx.strokeRect(GRID_X, GRID_Y, GRID_W, GRID_H);
-
-  // Row dividers
   for (let row = 1; row < 4; row++) {
     const y = GRID_Y + row * ROW_H;
     ctx.beginPath();
-    ctx.moveTo(GRID_X, y);
-    ctx.lineTo(GRID_X + GRID_W, y);
+    ctx.moveTo(GRID_X + 1, y);
+    ctx.lineTo(GRID_X + GRID_W - 1, y);
     ctx.stroke();
   }
 
-  // Hour dividers + labels
-  ctx.font = "9px monospace";
-  ctx.fillStyle = C_TEXT_LIGHT;
+  // Hour dividers + 15-min sub-ticks (vertical, strictly inside the border)
   for (let h = 0; h <= HOURS; h++) {
     const x = GRID_X + (h / HOURS) * GRID_W;
 
-    // Major hour line
+    // Major hour line — full inner height
     ctx.strokeStyle = C_GRID_LIGHT;
     ctx.lineWidth = h % 6 === 0 ? 1 : 0.5;
     ctx.beginPath();
-    ctx.moveTo(x, GRID_Y);
-    ctx.lineTo(x, GRID_Y + GRID_H);
+    ctx.moveTo(x, innerTop);
+    ctx.lineTo(x, innerBottom);
     ctx.stroke();
 
-    // 15-min sub-ticks (3 per hour)
+    // 15-min sub-ticks (3 per hour) — short tick from top inward
     if (h < HOURS) {
       for (let q = 1; q < 4; q++) {
         const qx = GRID_X + ((h + q / 4) / HOURS) * GRID_W;
         ctx.strokeStyle = C_GRID_LIGHT;
         ctx.lineWidth = 0.3;
         ctx.beginPath();
-        ctx.moveTo(qx, GRID_Y);
-        ctx.lineTo(qx, GRID_Y + 8); // short tick at top only
+        ctx.moveTo(qx, innerTop);
+        ctx.lineTo(qx, innerTop + 7);
         ctx.stroke();
       }
     }
+  }
 
-    // Hour label (midnight = "M", noon = "N", others as numbers)
+  // Outer border drawn LAST — sits on top and covers any anti-alias bleed
+  // from inner lines meeting the edge.
+  ctx.strokeStyle = C_GRID;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(GRID_X, GRID_Y, GRID_W, GRID_H);
+
+  // Hour labels (above the grid, unaffected by inner clipping)
+  ctx.font = "9px monospace";
+  ctx.fillStyle = C_TEXT_LIGHT;
+  for (let h = 0; h <= HOURS; h++) {
+    const x = GRID_X + (h / HOURS) * GRID_W;
     const label =
       h === 0
         ? "M"
@@ -166,7 +176,6 @@ function drawGrid(ctx: CanvasRenderingContext2D) {
           : h === 24
             ? "M"
             : String(h > 12 ? h - 12 : h);
-    ctx.fillStyle = C_TEXT_LIGHT;
     ctx.fillText(label, x - 4, GRID_Y - 4);
   }
 
@@ -176,7 +185,6 @@ function drawGrid(ctx: CanvasRenderingContext2D) {
   for (let line = 1; line <= 4; line++) {
     const label = ROW_LABELS[line];
     const y = GRID_Y + (line - 1) * ROW_H;
-    // Multi-line labels (split on \n)
     label.split("\n").forEach((part, i) => {
       ctx.fillText(part, MARGIN, y + 14 + i * 12);
     });
