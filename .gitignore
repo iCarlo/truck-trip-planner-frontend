@@ -47,3 +47,6 @@ coverage/
 
 # Storybook
 storybook-static/
+
+# Graphify
+graphify-out/
